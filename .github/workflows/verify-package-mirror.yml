@@ -1,0 +1,33 @@
+name: Verify package mirror tooling
+
+on:
+    pull_request:
+        branches: [main]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: package-mirror-verifier-pr-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
+
+jobs:
+    verifier:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        defaults:
+            run:
+                working-directory: .github/package-mirror-verifier
+        steps:
+            - name: Read pull request source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - name: Install the Rust toolchain
+              run: rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+            - name: Check Rust formatting
+              run: cargo +1.99.1 fmt --check
+            - name: Check Rust lints
+              run: cargo +1.99.1 clippy --locked --all-targets -- -D warnings
+            - name: Test the package mirror verifier
+              run: cargo +1.99.1 test --locked
